@@ -1,15 +1,28 @@
 // ==UserScript==
 // @name         Doc88Downloader
 // @namespace    https://github.com/lomexicano/Doc88Downloader
-// @version      1.0
+// @version      1.1
 // @description  Download screenshots from all pages from a Doc88 file in one PDF
 // @author       lomexicano
 // @match        https://www.doc88.com/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.11.1/pdf-lib.js
 // ==/UserScript==
 
+// Function to extract the page title from the HTML
+function extractPageTitle() {
+    const pageTitleElement = document.querySelector('h1[title]');
+    if (pageTitleElement) {
+        return pageTitleElement.getAttribute('title').trim();
+    }
+    return 'merged_pages'; // Default title if not found
+}
+
+// Function to download the current page's "page_i" elements in a PDF file;
 async function downloadPagesAsPDF(from, to) {
     'use strict';
+
+    const pageTitle = extractPageTitle();
+
     const pdfDoc = await window.PDFLib.PDFDocument.create();
 
     for (let i = from; i <= to; i++) {
@@ -49,13 +62,11 @@ async function downloadPagesAsPDF(from, to) {
     const pdfBytes = await pdfDoc.save();
 
     const anchor = document.createElement('a');
-    anchor.download = 'merged_pages.pdf';
+    anchor.download = pageTitle + '.pdf';
     anchor.href = URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
     anchor.click();
     URL.revokeObjectURL(anchor.href);
 }
-
-
 
 function createDownloadButton() {
     const button = document.createElement('button');
