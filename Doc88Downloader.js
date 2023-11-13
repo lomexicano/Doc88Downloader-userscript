@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Doc88Downloader
 // @namespace    https://github.com/lomexicano/Doc88Downloader
-// @version      2.0
+// @version      2.1
 // @description  Download screenshots from all pages from a Doc88 file in one PDF
 // @author       lomexicano
 // @match        https://www.doc88.com/*
@@ -22,6 +22,7 @@ async function downloadPagesAsPDF(from, to) {
     'use strict';
 
     const pageTitle = extractPageTitle();
+    console.log('Page title: '+pageTitle);
 
     const pdfDoc = await window.PDFLib.PDFDocument.create();
 
@@ -32,8 +33,11 @@ async function downloadPagesAsPDF(from, to) {
         }
         const pageCanvas = document.getElementById('page_' + i);
         if (pageCanvas === null) {
+            console.log('OK! All pages were added to the PDF...');
             break;
         }
+        console.log('Adding page '+i+' to the PDF...');
+
         const blob = await new Promise((resolve) => {
             pageCanvas.toBlob((blob) => resolve(blob));
         });
@@ -71,8 +75,8 @@ async function downloadPagesAsPDF(from, to) {
         anchor.click();
         URL.revokeObjectURL(anchor.href);
 
-        cancelButton.textContent = "Cancel";
-        cancelButton.disabled = true;
+        //cancelButton.textContent = "Cancel";
+        //cancelButton.disabled = true;
     }
     ongoingProcess = false;
 }
@@ -86,6 +90,7 @@ function displayAllPages() {
         if (moreButton) {
             // Trigger a click event on the button
             moreButton.click();
+            console.log('Clicking the button to display all pages...');
 
             // Wait for 2 seconds (2000 milliseconds) after clicking, so it loads the other pages HTML, at least;
             setTimeout(() => {
@@ -101,38 +106,63 @@ async function scrollToPagesWithPercentage() {
     while (true) {
         ongoingProcess = true;
         let pagesWithPercentage = document.querySelectorAll('div.page_pb[id^="pagepb_"]');
-        let percentageRemoved = true;
+        let allPagesLoaded = true; // Track if all pages have been loaded successfully
 
         for (let i = 0; i < pagesWithPercentage.length; i++) {
             if (cancelProcess) {
                 break;
             }
+
             const page = pagesWithPercentage[i];
-            const text = page.textContent.trim();
-            if (text.endsWith('%')) {
+
+            const updatedText = page.textContent.trim();
+            if (updatedText.endsWith('%')) {
+                console.log('Loading page '+(i+1)+'/'+pagesWithPercentage.length+'...');
                 // Scroll to the page
                 page.scrollIntoView({ behavior: 'smooth' });
 
                 // Wait for a moment (you can adjust the delay as needed)
                 await waitFor(100);
 
-                // Check again if the percentage is still there
-                pagesWithPercentage = document.querySelectorAll('div.page_pb[id^="pagepb_"]');
-                percentageRemoved = false;
-                break; // Exit the loop to scroll to the next page
+                // Check if the percentage is still there after each 100ms increment
+                let percentageRemoved = false;
+
+                for (let j = 0; j < 12; j++) {
+                    await waitFor(100);
+
+                    // Update the page.textContent value in each iteration
+                    const updatedText = page.textContent.trim();
+
+                    if (!updatedText.endsWith('%')) {
+                        // If the percentage is no longer there, set flag for this page
+                        percentageRemoved = true;
+                        break;
+                    }
+                }
+
+                if (!percentageRemoved) {
+                    // If the percentage is still there after 20 attempts, set flag for all pages
+                    allPagesLoaded = false;
+                    console.log('This page could not be loaded yet. Coming back for it later...');
+                }
             }
         }
 
         // If all pages have had their percentage removed, exit the loop
-        if (percentageRemoved) {
+        if (allPagesLoaded) {
+            console.log('All pages loaded successfully!');
             break;
         }
+
         if (cancelProcess) {
             break;
         }
     }
+
     ongoingProcess = false;
 }
+
+
 
 let cancelProcess = false; // Flag to indicate if the processes should be canceled
 let ongoingProcess = false; // Flag to indicate if there is an ongoing process
@@ -178,6 +208,7 @@ function createDownloadButton() {
     cancelButton.addEventListener('click', async () => {
         cancelProcess = true; // Set the cancel flag to true
         updateCancelButton('OK. Canceled.', false); // Disable the Cancel button
+        button.disabled = false;
 
         setTimeout(() => {
             updateCancelButton('Cancel', false);
@@ -193,6 +224,7 @@ function createDownloadButton() {
         const shouldLoadAllPages = document.getElementById('loadAllPagesCheckbox').checked;
         updateCancelButton('Cancel', true); // Enable the Cancel button
 
+        button.disabled = true;
         if (shouldLoadAllPages) {
             ongoingProcess = true; // There is an ongoing process
             await displayAllPages();
@@ -223,6 +255,7 @@ function createDownloadButton() {
 
         await downloadPagesAsPDF(1, 9999);
         ongoingProcess = false; // No ongoing process
+        button.disabled = false;
     });
 
     const buttonContainer = document.createElement('div'); // Container for the buttons
