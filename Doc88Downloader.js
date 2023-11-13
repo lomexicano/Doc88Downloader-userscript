@@ -6,6 +6,7 @@
 // @author       lomexicano
 // @match        https://www.doc88.com/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.11.1/pdf-lib.js
+// @license MIT
 // ==/UserScript==
 
 // Function to extract the page title from the HTML
