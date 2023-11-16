@@ -1,4 +1,4 @@
-# Doc88Downloader
+# Doc88Downloader userscript
 JaveScript (userscript) to save a PDF with screenshots of all pages from a file from Doc88. It was made to be used with GreaseMonkey or TamperMonkey.
 
 ## Installation
